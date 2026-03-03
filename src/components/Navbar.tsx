@@ -1,13 +1,48 @@
 import { Link, useLocation } from "react-router-dom";
 import { ShoppingCart, Phone, Menu, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 const Navbar = () => {
   const { totalItems, dispatch } = useCart();
+  const { user, role, signOut } = useAuth();
   const location = useLocation();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [firstName, setFirstName] = useState("User");
+
+  const isLoggedIn = !!user;
+
+  useEffect(() => {
+    const fetchName = async () => {
+      if (!user) {
+        setFirstName("User");
+        return;
+      }
+
+      const { data } = await supabase
+        .from("customers")
+        .select("name")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+
+      if (data?.name) {
+        setFirstName(data.name.split(" ")[0]);
+      } else {
+        setFirstName("User");
+      }
+    };
+
+    fetchName();
+  }, [user]);
+
+  const handleLogout = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+  };
 
   const navLinks = [
     { to: "/", label: "Home" },
@@ -15,51 +50,105 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border">
-      <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-            <span className="font-display text-primary-foreground text-lg font-bold">K</span>
-          </div>
-          <span className="font-display text-xl font-bold text-foreground">
-            Kalyan<span className="text-primary">Bites</span>
-          </span>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+      <div className="container mx-auto flex items-center justify-between h-20 px-6">
+
+        {/* Logo */}
+        <Link to="/">
+          <img
+            src="https://res.cloudinary.com/dytq68dhv/image/upload/v1772482040/bbb2_odvosp.png"
+            alt="Sspice Pizza"
+            className="h-[70px] w-auto object-contain"
+          />
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className={`font-sans text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === link.to ? "text-primary" : "text-muted-foreground"
+              className={`text-sm font-medium hover:text-primary ${
+                location.pathname === link.to
+                  ? "text-primary"
+                  : "text-muted-foreground"
               }`}
             >
               {link.label}
             </Link>
           ))}
+
+          {isLoggedIn ? (
+            <>
+              <span className="text-sm font-medium">
+                Hello, {firstName}
+              </span>
+
+              <Link to="/profile" className="text-sm hover:text-primary">
+                Profile
+              </Link>
+
+              {role === "superadmin" && (
+                <Link
+                  to="/admin/manage-admins"
+                  className="text-sm font-semibold text-purple-500 hover:text-purple-600"
+                >
+                  Super Admin Panel
+                </Link>
+              )}
+
+              {role === "admin" && (
+                <Link
+                  to="/admin"
+                  className="text-sm font-semibold text-accent hover:text-primary"
+                >
+                  Admin Dashboard
+                </Link>
+              )}
+
+              {role === "delivery" && (
+                <Link
+                  to="/admin/delivery"
+                  className="text-sm font-semibold text-green-500 hover:text-green-600"
+                >
+                  Delivery Panel
+                </Link>
+              )}
+
+              <button
+                onClick={handleLogout}
+                className="text-sm text-red-500 hover:text-red-600"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="px-4 py-2 bg-primary text-white rounded-lg text-sm"
+            >
+              Login / Sign Up
+            </Link>
+          )}
         </div>
 
-        <div className="flex items-center gap-3">
-          <a
-            href="tel:+919876543210"
-            className="hidden sm:flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
-          >
+        {/* Right Section */}
+        <div className="flex items-center gap-4">
+          <a href="tel:+919876543210" className="hidden sm:flex gap-2">
             <Phone className="w-4 h-4" />
-            Call to Order
+            Call
           </a>
 
           <button
             onClick={() => dispatch({ type: "TOGGLE_CART" })}
-            className="relative p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all hover:scale-105 active:scale-95"
+            className="relative p-2 bg-primary text-white rounded-lg"
           >
             <ShoppingCart className="w-5 h-5" />
             {totalItems > 0 && (
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute -top-1.5 -right-1.5 bg-accent text-accent-foreground text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                className="absolute -top-1 -right-1 bg-accent text-xs w-5 h-5 rounded-full flex items-center justify-center"
               >
                 {totalItems}
               </motion.span>
@@ -68,46 +157,12 @@ const Navbar = () => {
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-foreground"
+            className="md:hidden"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
       </div>
-
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-background border-b border-border overflow-hidden"
-          >
-            <div className="px-4 py-4 flex flex-col gap-3">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`text-base font-medium py-2 transition-colors ${
-                    location.pathname === link.to ? "text-primary" : "text-muted-foreground"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <a
-                href="tel:+919876543210"
-                className="flex items-center gap-2 text-base font-medium text-accent py-2"
-              >
-                <Phone className="w-4 h-4" />
-                Call to Order
-              </a>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </nav>
   );
 };

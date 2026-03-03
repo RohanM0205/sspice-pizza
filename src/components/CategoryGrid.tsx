@@ -1,8 +1,32 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { categories } from "@/lib/menu-data";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+interface Category {
+  id: string;
+  name: string;
+  image_url?: string;
+  sort_order?: number;
+}
 
 const CategoryGrid = () => {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (data) setCategories(data);
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
     <section className="py-16 sm:py-20">
       <div className="container mx-auto px-4">
@@ -10,7 +34,7 @@ const CategoryGrid = () => {
           <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-3">
             Explore Our Menu
           </h2>
-          <p className="text-dim font-sans text-lg">
+          <p className="text-dim text-lg">
             Pure veg delights, made fresh for you
           </p>
         </div>
@@ -22,22 +46,22 @@ const CategoryGrid = () => {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
+              transition={{ delay: i * 0.08 }}
             >
               <Link
                 to={`/menu?category=${cat.id}`}
                 className="group block rounded-xl overflow-hidden bg-card border border-border hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/10"
               >
-                <div className="aspect-square overflow-hidden">
+                <div className="aspect-square overflow-hidden bg-muted">
                   <img
-                    src={cat.image}
+                    src={cat.image_url || "/placeholder.png"}
                     alt={cat.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     loading="lazy"
                   />
                 </div>
                 <div className="p-3 text-center">
-                  <h3 className="font-sans font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
                     {cat.name}
                   </h3>
                 </div>
