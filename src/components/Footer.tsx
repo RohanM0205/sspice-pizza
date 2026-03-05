@@ -9,10 +9,10 @@ const Footer = () => {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-                <span className="font-display text-primary-foreground text-lg font-bold">K</span>
+                <span className="font-display text-primary-foreground text-lg font-bold">S</span>
               </div>
               <span className="font-display text-xl font-bold text-foreground">
-                Kalyan<span className="text-primary">Bites</span>
+                Sspice<span className="text-primary">Pizza</span>
               </span>
             </div>
             <p className="text-dim text-sm font-sans leading-relaxed">
@@ -61,7 +61,7 @@ const Footer = () => {
 
         <div className="mt-10 pt-6 border-t border-border text-center">
           <p className="text-dim text-xs font-sans">
-            © 2026 KalyanBites. All rights reserved. Made with ❤️ in Kalyan.
+            © 2026 Sspice Pizza. All rights reserved. Made with ❤️ in Kalyan.
           </p>
         </div>
       </div>

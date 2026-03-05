@@ -35,8 +35,8 @@ const HeroSection = () => {
           </h1>
 
           <p className="text-lg sm:text-xl text-dim font-sans mb-8 leading-relaxed">
-            Freshly baked pure veg pizzas, burgers & more — crafted with love in{" "}
-            <span className="text-accent font-medium">Kalyan, Maharashtra</span>
+            Freshly baked pure veg pizzas, burgers & more — lovingly crafted for{" "}
+            <span className="text-accent font-medium">Kalyankars</span>
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">

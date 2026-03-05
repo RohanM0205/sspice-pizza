@@ -56,7 +56,7 @@ const Navbar = () => {
         {/* Logo */}
         <Link to="/">
           <img
-            src="https://res.cloudinary.com/dytq68dhv/image/upload/v1772482040/bbb2_odvosp.png"
+            src="https://res.cloudinary.com/dytq68dhv/image/upload/v1772710725/complete3_atunro.png"
             alt="Sspice Pizza"
             className="h-[70px] w-auto object-contain"
           />

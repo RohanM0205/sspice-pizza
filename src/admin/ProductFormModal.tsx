@@ -6,10 +6,12 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  existingProduct?: any;
 }
 
 const RESTAURANT_ID = "11111111-1111-1111-1111-111111111111";
+
+const CLOUDINARY_CLOUD = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 interface Variant {
   variant_name: string;
@@ -22,14 +24,11 @@ interface Addon {
   price: number;
 }
 
-const ProductFormModal = ({
-  isOpen,
-  onClose,
-  onSuccess,
-  existingProduct,
-}: Props) => {
+const ProductFormModal = ({ isOpen, onClose, onSuccess }: Props) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const [variants, setVariants] = useState<Variant[]>([
     { variant_name: "", price: 0, is_default: true },
@@ -59,40 +58,44 @@ const ProductFormModal = ({
     fetchCategories();
   }, []);
 
-  useEffect(() => {
-    const loadProductData = async () => {
-      if (!existingProduct) return;
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
 
-      const { data: variantData } = await supabase
-        .from("product_variants")
-        .select("*")
-        .eq("product_id", existingProduct.id);
+    formData.append("file", file);
+    formData.append("upload_preset", CLOUDINARY_PRESET);
 
-      const { data: addonData } = await supabase
-        .from("product_addons")
-        .select("*")
-        .eq("product_id", existingProduct.id);
+    try {
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
-      if (variantData && variantData.length > 0) {
-        setVariants(variantData);
-      }
+      const data = await res.json();
 
-      if (addonData) {
-        setAddons(addonData);
-      }
+      setForm({ ...form, image_url: data.secure_url });
+      setImagePreview(data.secure_url);
 
-      setForm({
-        name: existingProduct.name,
-        description: existingProduct.description,
-        image_url: existingProduct.image_url,
-        category_id: existingProduct.category_id,
-        is_available: existingProduct.is_available,
-        is_featured: existingProduct.is_featured,
-      });
-    };
+      toast.success("Image uploaded");
+    } catch {
+      toast.error("Image upload failed");
+    }
+  };
 
-    loadProductData();
-  }, [existingProduct]);
+  const handleImageChange = (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setImagePreview(URL.createObjectURL(file));
+    uploadImage(file);
+  };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setForm({ ...form, image_url: "" });
+  };
 
   const addVariant = () =>
     setVariants([...variants, { variant_name: "", price: 0, is_default: false }]);
@@ -129,38 +132,22 @@ const ProductFormModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.name || !form.category_id) {
-      toast.error("Name & category required");
+    if (!form.name || !form.category_id || !form.image_url) {
+      toast.error("Name, Category and Image required");
       return;
     }
 
     try {
       setLoading(true);
 
-      let productId = existingProduct?.id;
+      const { data } = await supabase
+        .from("products")
+        .insert([{ ...form, restaurant_id: RESTAURANT_ID }])
+        .select()
+        .single();
 
-      if (existingProduct) {
-        await supabase
-          .from("products")
-          .update(form)
-          .eq("id", existingProduct.id);
-      } else {
-        const { data } = await supabase
-          .from("products")
-          .insert([{ ...form, restaurant_id: RESTAURANT_ID }])
-          .select()
-          .single();
+      const productId = data.id;
 
-        productId = data.id;
-      }
-
-      // Clear old variants & addons if editing
-      if (existingProduct) {
-        await supabase.from("product_variants").delete().eq("product_id", productId);
-        await supabase.from("product_addons").delete().eq("product_id", productId);
-      }
-
-      // Insert variants
       await supabase.from("product_variants").insert(
         variants.map((v) => ({
           product_id: productId,
@@ -170,7 +157,6 @@ const ProductFormModal = ({
         }))
       );
 
-      // Insert addons
       if (addons.length > 0) {
         await supabase.from("product_addons").insert(
           addons.map((a) => ({
@@ -181,11 +167,12 @@ const ProductFormModal = ({
         );
       }
 
-      toast.success(existingProduct ? "Updated" : "Added");
+      toast.success("Product added successfully");
       onSuccess();
       onClose();
+
     } catch (err: any) {
-      toast.error(err.message || "Error occurred");
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -194,43 +181,73 @@ const ProductFormModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+
       <div className="bg-card w-full max-w-3xl p-6 rounded-xl border overflow-y-auto max-h-[90vh]">
 
-        <h2 className="text-xl font-bold mb-4">
-          {existingProduct ? "Edit Product" : "Add Product"}
+        <h2 className="text-2xl font-bold mb-6">
+          Add Product
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
 
+          {/* IMAGE UPLOAD */}
+
+          <div>
+            <p className="font-semibold mb-2">Product Image</p>
+
+            {!imagePreview ? (
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+            ) : (
+              <div className="relative w-48">
+                <img
+                  src={imagePreview}
+                  className="rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 text-xs rounded"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* BASIC INFO */}
+
           <input
             placeholder="Product Name"
             className="w-full px-4 py-3 bg-secondary border rounded-lg"
             value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, name: e.target.value })
+            }
           />
 
           <textarea
             placeholder="Description"
             className="w-full px-4 py-3 bg-secondary border rounded-lg"
             value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-
-          <input
-            placeholder="Cloudinary Image URL"
-            className="w-full px-4 py-3 bg-secondary border rounded-lg"
-            value={form.image_url}
-            onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, description: e.target.value })
+            }
           />
 
           <select
             className="w-full px-4 py-3 bg-secondary border rounded-lg"
             value={form.category_id}
-            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, category_id: e.target.value })
+            }
           >
             <option value="">Select Category</option>
+
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -238,13 +255,45 @@ const ProductFormModal = ({
             ))}
           </select>
 
+          {/* TOGGLES */}
+
+          <div className="flex gap-6">
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.is_available}
+                onChange={(e) =>
+                  setForm({ ...form, is_available: e.target.checked })
+                }
+              />
+              Available
+            </label>
+
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.is_featured}
+                onChange={(e) =>
+                  setForm({ ...form, is_featured: e.target.checked })
+                }
+              />
+              Featured
+            </label>
+
+          </div>
+
           {/* VARIANTS */}
+
           <div>
+
             <h3 className="font-bold mb-3">Variants</h3>
+
             {variants.map((variant, index) => (
               <div key={index} className="flex gap-3 mb-2 items-center">
+
                 <input
-                  placeholder="Name"
+                  placeholder="Size"
                   value={variant.variant_name}
                   onChange={(e) =>
                     updateVariant(index, "variant_name", e.target.value)
@@ -275,6 +324,7 @@ const ProductFormModal = ({
                 >
                   Remove
                 </button>
+
               </div>
             ))}
 
@@ -285,14 +335,18 @@ const ProductFormModal = ({
             >
               + Add Variant
             </button>
+
           </div>
 
           {/* ADDONS */}
+
           <div>
+
             <h3 className="font-bold mb-3">Addons</h3>
 
             {addons.map((addon, index) => (
               <div key={index} className="flex gap-3 mb-2">
+
                 <input
                   placeholder="Addon Name"
                   value={addon.name}
@@ -319,6 +373,7 @@ const ProductFormModal = ({
                 >
                   Remove
                 </button>
+
               </div>
             ))}
 
@@ -329,23 +384,29 @@ const ProductFormModal = ({
             >
               + Add Addon
             </button>
+
           </div>
 
           {/* ACTIONS */}
+
           <div className="flex justify-end gap-3">
+
             <button type="button" onClick={onClose}>
               Cancel
             </button>
+
             <button
               type="submit"
               disabled={loading}
-              className="bg-primary px-4 py-2 rounded-lg text-primary-foreground"
+              className="bg-primary px-5 py-2 rounded-lg text-primary-foreground"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading ? "Saving..." : "Save Product"}
             </button>
+
           </div>
 
         </form>
+
       </div>
     </div>
   );

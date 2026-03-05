@@ -21,6 +21,7 @@ interface Category {
   id: string;
   name: string;
   sort_order: number;
+  icon?: string;
 }
 
 const MenuPage = () => {
@@ -35,11 +36,14 @@ const MenuPage = () => {
     const fetchData = async () => {
       setLoading(true);
 
+      // ✅ Fetch only ACTIVE categories
       const { data: catData } = await supabase
         .from("categories")
         .select("*")
+        .eq("is_active", true)
         .order("sort_order", { ascending: true });
 
+      // Fetch products
       const { data: productData } = await supabase
         .from("products")
         .select(`
@@ -49,42 +53,60 @@ const MenuPage = () => {
         `)
         .eq("is_available", true);
 
-      if (catData) setCategories(catData);
+      if (catData) {
+        setCategories(catData);
 
-      if (productData) {
-        const mapped = productData.map((p: DBProduct) => ({
-          id: p.id,
-          categoryId: p.category_id,
-          name: p.name,
-          description: p.description,
-          image: p.image_url,
-          isAvailable: p.is_available,
-          isFeatured: p.is_featured,
+        // List of active category ids
+        const activeCategoryIds = catData.map((c) => c.id);
 
-          // 🔥 Normalize variants
-          variants: p.product_variants.map((v: any) => ({
-            id: v.id,
-            name: v.variant_name,
-            price: Number(v.price),
-            isDefault: v.is_default,
-          })),
+        // If user is currently on a hidden category → reset to "All"
+        if (
+          activeCategory !== "all" &&
+          !activeCategoryIds.includes(activeCategory)
+        ) {
+          setSearchParams({});
+        }
 
-          // 🔥 Normalize addons
-          addons: p.product_addons.map((a: any) => ({
-            id: a.id,
-            name: a.name,
-            price: Number(a.price),
-          })),
-        }));
+        if (productData) {
+          const mapped = productData
+            // ✅ Remove products from hidden categories
+            .filter((p: DBProduct) =>
+              activeCategoryIds.includes(p.category_id)
+            )
+            .map((p: DBProduct) => ({
+              id: p.id,
+              categoryId: p.category_id,
+              name: p.name,
+              description: p.description,
+              image: p.image_url,
+              isAvailable: p.is_available,
+              isFeatured: p.is_featured,
 
-        setProducts(mapped);
+              // Normalize variants
+              variants: p.product_variants.map((v: any) => ({
+                id: v.id,
+                name: v.variant_name,
+                price: Number(v.price),
+                isDefault: v.is_default,
+              })),
+
+              // Normalize addons
+              addons: p.product_addons.map((a: any) => ({
+                id: a.id,
+                name: a.name,
+                price: Number(a.price),
+              })),
+            }));
+
+          setProducts(mapped);
+        }
       }
 
       setLoading(false);
     };
 
     fetchData();
-  }, []);
+  }, [activeCategory, setSearchParams]);
 
   const filtered = useMemo(() => {
     if (activeCategory === "all") return products;
@@ -131,6 +153,8 @@ const MenuPage = () => {
                     : "bg-secondary text-secondary-foreground border-border hover:border-primary/50"
                 }`}
               >
+                {/* Optional icon support */}
+                {cat.icon ? `${cat.icon} ` : ""}
                 {cat.name}
               </button>
             ))}

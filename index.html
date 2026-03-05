@@ -2,26 +2,67 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>KalyanBites — Pure Veg Pizza & Fast Food in Kalyan</title>
-    <meta name="description" content="Order freshly baked pure veg pizzas, burgers, pasta & more from KalyanBites. Fast delivery in Kalyan, Maharashtra." />
-    <meta property="og:title" content="KalyanBites — Pure Veg Pizza & Fast Food" />
-    <meta property="og:description" content="Freshly baked pure veg pizzas, burgers & more in Kalyan" />
+
+    <!-- Favicon (larger versions supported) -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- Mobile & Responsive -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Theme color for mobile browsers -->
+    <meta name="theme-color" content="#e11d2a" />
+
+    <!-- Title -->
+    <title>Sspice Pizza — Fresh Veg Pizza Delivered Fast</title>
+
+    <!-- SEO Description -->
+    <meta
+      name="description"
+      content="Order freshly baked pure veg pizzas, burgers, pasta and more from Sspice Pizza. Hot, fresh and delicious food served with love."
+    />
+
+    <!-- Open Graph (for WhatsApp, Facebook etc.) -->
+    <meta property="og:title" content="Sspice Pizza — Pure Veg Pizza & Fast Food" />
+    <meta
+      property="og:description"
+      content="Freshly baked pure veg pizzas, burgers, pasta & more from Sspice Pizza."
+    />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="/social-preview.png" />
+
+    <!-- Twitter preview -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sspice Pizza — Pure Veg Pizza & Fast Food" />
+    <meta
+      name="twitter:description"
+      content="Freshly baked pure veg pizzas, burgers & more from Sspice Pizza."
+    />
+
+    <!-- Restaurant Structured Data (SEO) -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Restaurant",
-      "name": "KalyanBites",
-      "servesCuisine": ["Pizza", "Fast Food"],
-      "address": { "@type": "PostalAddress", "addressLocality": "Kalyan", "addressRegion": "Maharashtra", "addressCountry": "IN" },
-      "telephone": "+919876543210"
-    }
+      {
+        "@context": "https://schema.org",
+        "@type": "Restaurant",
+        "name": "Sspice Pizza",
+        "servesCuisine": ["Pizza", "Fast Food"],
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Kalyan",
+          "addressRegion": "Maharashtra",
+          "addressCountry": "IN"
+        },
+        "telephone": "+919876543210"
+      }
     </script>
   </head>
+
   <body>
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

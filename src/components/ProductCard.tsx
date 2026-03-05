@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShoppingCart, Crown } from "lucide-react";
+import { ShoppingCart, Flame  } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 
@@ -119,13 +119,16 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           loading="lazy"
         />
 
-        {/* 🔥 Upgraded Featured Tag */}
-        {product.isFeatured && (
-          <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
-            <Crown className="w-3 h-3" />
-            Bestseller
-          </div>
-        )}
+        {/* ⭐ Premium Bestseller Tag */}
+{product.isFeatured && (
+  <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-white bg-black/40 backdrop-blur-md border border-white/10 shadow-sm">
+    <Flame
+      className="w-3.5 h-3.5 text-orange-400"
+      strokeWidth={2.5}
+    />
+    Bestseller
+  </div>
+)}
 
         {/* VEG badge */}
         <div className="absolute top-3 right-3 flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
@@ -145,7 +148,6 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           {product.description}
         </p>
 
-        {/* ✅ Variant selector with price */}
         {product.variants.length > 1 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
             {product.variants.map((v) => {
@@ -167,7 +169,6 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           </div>
         )}
 
-        {/* Addons */}
         {product.addons.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4">
             {product.addons.map((a) => (
@@ -187,7 +188,6 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         )}
 
         <div className="flex items-center justify-between">
-          {/* ✅ Animated Price */}
           <motion.p
             key={totalPrice}
             initial={{ scale: 0.9, opacity: 0 }}
@@ -198,7 +198,6 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             ₹{totalPrice}
           </motion.p>
 
-          {/* ✅ Micro feedback button */}
           <button
             onClick={addToCart}
             className={`flex items-center gap-2 font-semibold px-4 py-2.5 rounded-lg transition-all ${
