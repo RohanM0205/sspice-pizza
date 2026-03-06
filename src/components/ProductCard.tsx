@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ShoppingCart, Flame  } from "lucide-react";
+import { ShoppingCart, Flame } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 
@@ -103,6 +103,8 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
     Number(selectedVariant.price ?? 0) +
     selectedAddons.reduce((s, a) => s + Number(a.price ?? 0), 0);
 
+  const minVariantPrice = Math.min(...product.variants.map((v) => v.price));
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -119,18 +121,16 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           loading="lazy"
         />
 
-        {/* ⭐ Premium Bestseller Tag */}
-{product.isFeatured && (
-  <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-white bg-black/40 backdrop-blur-md border border-white/10 shadow-sm">
-    <Flame
-      className="w-3.5 h-3.5 text-orange-400"
-      strokeWidth={2.5}
-    />
-    Bestseller
-  </div>
-)}
+        {product.isFeatured && (
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-white bg-black/40 backdrop-blur-md border border-white/10 shadow-sm">
+            <Flame
+              className="w-3.5 h-3.5 text-orange-400"
+              strokeWidth={2.5}
+            />
+            Bestseller
+          </div>
+        )}
 
-        {/* VEG badge */}
         <div className="absolute top-3 right-3 flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-full px-2 py-1">
           <span className="w-2 h-2 rounded-full bg-veg" />
           <span className="text-[10px] font-medium">
@@ -147,6 +147,12 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         <p className="text-dim text-sm mb-3 line-clamp-2">
           {product.description}
         </p>
+
+        {product.variants.length > 1 && (
+          <div className="text-xs text-muted-foreground mb-2">
+            ₹{minVariantPrice} onwards
+          </div>
+        )}
 
         {product.variants.length > 1 && (
           <div className="flex flex-wrap gap-1.5 mb-3">

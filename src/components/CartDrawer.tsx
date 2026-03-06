@@ -12,9 +12,6 @@ const CartDrawer = () => {
 
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  /* =========================
-     🔥 Auto Close If Empty
-  ========================= */
   useEffect(() => {
     if (state.items.length === 0 && state.isOpen) {
       const timer = setTimeout(() => {
@@ -32,7 +29,6 @@ const CartDrawer = () => {
     <AnimatePresence>
       {state.isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -41,7 +37,6 @@ const CartDrawer = () => {
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
           />
 
-          {/* Drawer */}
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -68,9 +63,6 @@ const CartDrawer = () => {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4">
               {state.items.length === 0 ? (
-                /* =========================
-                   🔥 Empty State (Dominos Style)
-                ========================= */
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -94,33 +86,28 @@ const CartDrawer = () => {
                   </p>
 
                   <div className="flex flex-col gap-3 w-full">
-  {/* 🔥 Browse Menu */}
-  <button
-    onClick={() => {
-      dispatch({ type: "CLOSE_CART" });
-      navigate("/menu");
-    }}
-    className="w-full bg-primary text-white font-semibold py-3 rounded-lg hover:scale-[1.02] active:scale-[0.98] transition"
-  >
-    Browse Menu
-  </button>
+                    <button
+                      onClick={() => {
+                        dispatch({ type: "CLOSE_CART" });
+                        navigate("/menu");
+                      }}
+                      className="w-full bg-primary text-white font-semibold py-3 rounded-lg hover:scale-[1.02] active:scale-[0.98] transition"
+                    >
+                      Browse Menu
+                    </button>
 
-  {/* 🔥 Best Sellers */}
-  <button
-    onClick={() => {
-      dispatch({ type: "CLOSE_CART" });
-      navigate("/", { state: { scrollTo: "featured" } });
-    }}
-    className="w-full border border-border text-foreground py-3 rounded-lg hover:bg-secondary transition"
-  >
-    View Best Sellers
-  </button>
-</div>
+                    <button
+                      onClick={() => {
+                        dispatch({ type: "CLOSE_CART" });
+                        navigate("/", { state: { scrollTo: "featured" } });
+                      }}
+                      className="w-full border border-border text-foreground py-3 rounded-lg hover:bg-secondary transition"
+                    >
+                      View Best Sellers
+                    </button>
+                  </div>
                 </motion.div>
               ) : (
-                /* =========================
-                   🔥 Cart Items
-                ========================= */
                 <div className="space-y-4">
                   <AnimatePresence>
                     {state.items.map((item) => {
@@ -226,39 +213,17 @@ const CartDrawer = () => {
                             </div>
                           </div>
 
-                          {confirmId === item.id ? (
-                            <div className="flex flex-col gap-1 text-xs">
-                              <button
-                                onClick={() =>
-                                  setConfirmId(null)
-                                }
-                                className="text-muted-foreground"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => {
-                                  dispatch({
-                                    type: "REMOVE_ITEM",
-                                    payload: item.id,
-                                  });
-                                  setConfirmId(null);
-                                }}
-                                className="text-red-500 font-bold"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() =>
-                                setConfirmId(item.id)
-                              }
-                              className="self-start text-muted-foreground hover:text-red-500"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            onClick={() =>
+                              dispatch({
+                                type: "REMOVE_ITEM",
+                                payload: item.id,
+                              })
+                            }
+                            className="self-start text-muted-foreground hover:text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </motion.div>
                       );
                     })}
@@ -270,6 +235,18 @@ const CartDrawer = () => {
             {/* Footer */}
             {state.items.length > 0 && (
               <div className="border-t border-border p-4 space-y-3">
+
+                {/* Add More Items Button */}
+                <button
+                  onClick={() => {
+                    dispatch({ type: "CLOSE_CART" });
+                    navigate("/menu");
+                  }}
+                  className="w-full border border-border text-foreground py-3 rounded-lg hover:bg-secondary transition"
+                >
+                  + Add More Items
+                </button>
+
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
                   <span>₹{safeSubtotal.toFixed(2)}</span>

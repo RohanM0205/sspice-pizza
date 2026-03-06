@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Search } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
@@ -31,19 +33,18 @@ const MenuPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
 
-      // ✅ Fetch only ACTIVE categories
       const { data: catData } = await supabase
         .from("categories")
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
 
-      // Fetch products
       const { data: productData } = await supabase
         .from("products")
         .select(`
@@ -56,10 +57,8 @@ const MenuPage = () => {
       if (catData) {
         setCategories(catData);
 
-        // List of active category ids
         const activeCategoryIds = catData.map((c) => c.id);
 
-        // If user is currently on a hidden category → reset to "All"
         if (
           activeCategory !== "all" &&
           !activeCategoryIds.includes(activeCategory)
@@ -69,7 +68,6 @@ const MenuPage = () => {
 
         if (productData) {
           const mapped = productData
-            // ✅ Remove products from hidden categories
             .filter((p: DBProduct) =>
               activeCategoryIds.includes(p.category_id)
             )
@@ -82,7 +80,6 @@ const MenuPage = () => {
               isAvailable: p.is_available,
               isFeatured: p.is_featured,
 
-              // Normalize variants
               variants: p.product_variants.map((v: any) => ({
                 id: v.id,
                 name: v.variant_name,
@@ -90,7 +87,6 @@ const MenuPage = () => {
                 isDefault: v.is_default,
               })),
 
-              // Normalize addons
               addons: p.product_addons.map((a: any) => ({
                 id: a.id,
                 name: a.name,
@@ -109,9 +105,24 @@ const MenuPage = () => {
   }, [activeCategory, setSearchParams]);
 
   const filtered = useMemo(() => {
-    if (activeCategory === "all") return products;
-    return products.filter((p) => p.categoryId === activeCategory);
-  }, [activeCategory, products]);
+    let result = products;
+
+    if (activeCategory !== "all") {
+      result = result.filter((p) => p.categoryId === activeCategory);
+    }
+
+    if (search.trim() !== "") {
+      const term = search.toLowerCase();
+
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(term) ||
+          p.description?.toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [activeCategory, products, search]);
 
   return (
     <main>
@@ -125,63 +136,83 @@ const MenuPage = () => {
             <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-2">
               Our Menu
             </h1>
-            <p className="text-dim text-lg">
-              Fresh, pure veg delights crafted with love
+
+            <p className="text-dim text-lg mb-6">
+              Fresh, pure veg delights crafted with love and care
             </p>
-          </div>
 
-          {/* Category Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-4 mb-8 scrollbar-hide">
-            <button
-              onClick={() => setSearchParams({})}
-              className={`shrink-0 px-5 py-2.5 rounded-full font-medium text-sm border transition-all ${
-                activeCategory === "all"
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-secondary text-secondary-foreground border-border hover:border-primary/50"
-              }`}
+            {/* Centered Search Bar */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-xl mx-auto"
             >
-              All
-            </button>
-
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSearchParams({ category: cat.id })}
-                className={`shrink-0 px-5 py-2.5 rounded-full font-medium text-sm border transition-all ${
-                  activeCategory === cat.id
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-secondary text-secondary-foreground border-border hover:border-primary/50"
-                }`}
-              >
-                {/* Optional icon support */}
-                {cat.icon ? `${cat.icon} ` : ""}
-                {cat.name}
-              </button>
-            ))}
+              <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-border bg-card">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search pizza, burgers, garlic bread..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-transparent outline-none text-sm text-center flex-1"
+                />
+              </div>
+            </motion.div>
           </div>
 
-          {loading && (
-            <div className="text-center py-20">
-              <p className="text-muted-foreground text-lg">
-                Loading menu...
-              </p>
+          {/* Sticky Categories */}
+          <div className="sticky top-[72px] z-30 bg-background/90 backdrop-blur border-b border-border">
+            <div className="flex justify-center">
+              <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
+                <button
+                  onClick={() => setSearchParams({})}
+                  className={`shrink-0 px-5 py-2.5 rounded-full font-medium text-sm border transition-all ${
+                    activeCategory === "all"
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary text-secondary-foreground border-border hover:border-primary/50"
+                  }`}
+                >
+                  All
+                </button>
+
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSearchParams({ category: cat.id })}
+                    className={`shrink-0 px-5 py-2.5 rounded-full font-medium text-sm border transition-all ${
+                      activeCategory === cat.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-secondary text-secondary-foreground border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {cat.icon ? `${cat.icon} ` : ""}
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
             </div>
+          </div>
+
+          {!loading && (
+            <p className="text-sm text-muted-foreground mb-6 text-center">
+              Showing {filtered.length} delicious item
+              {filtered.length !== 1 && "s"}
+            </p>
           )}
 
           {!loading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <motion.div
+              layout
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
               {filtered.map((product, i) => (
-                <ProductCard key={product.id} product={product} index={i} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  index={i}
+                />
               ))}
-            </div>
-          )}
-
-          {!loading && filtered.length === 0 && (
-            <div className="text-center py-20">
-              <p className="text-muted-foreground text-lg">
-                No items found in this category
-              </p>
-            </div>
+            </motion.div>
           )}
 
         </div>

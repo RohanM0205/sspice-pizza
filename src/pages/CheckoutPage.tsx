@@ -7,19 +7,23 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
+import DeliveryForm from "@/components/checkout/DeliveryForm";
+import CouponSection from "@/components/checkout/CouponSection";
+import OrderSummary from "@/components/checkout/OrderSummary";
+
 const RESTAURANT_ID = "11111111-1111-1111-1111-111111111111";
 
 const CheckoutPage = () => {
   const { state, totalAmount, deliveryCharge, dispatch } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
 
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
-  // ✅ Coupon States (NEW)
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -33,19 +37,28 @@ const CheckoutPage = () => {
     paymentMethod: "cod" as "cod" | "razorpay",
   });
 
-  // 🔹 Load customer + saved addresses if logged in
+  /* =========================
+     Load Customer + Addresses
+  ========================= */
+
   useEffect(() => {
     const loadCustomerData = async () => {
       if (!user) return;
 
-      const { data: customer } = await supabase
+      const { data: customer, error } = await supabase
         .from("customers")
         .select("*")
         .eq("auth_user_id", user.id)
         .single();
 
+      if (error) {
+        console.error("Customer fetch error:", error);
+        return;
+      }
+
       if (customer) {
         setCustomerId(customer.id);
+
         setForm((prev) => ({
           ...prev,
           name: customer.name || "",
@@ -64,7 +77,10 @@ const CheckoutPage = () => {
     loadCustomerData();
   }, [user]);
 
-  // ✅ Coupon Apply Logic (NEW)
+  /* =========================
+     Apply Coupon
+  ========================= */
+
   const handleApplyCoupon = async () => {
     if (!couponCode) {
       toast.error("Enter coupon code");
@@ -86,16 +102,14 @@ const CheckoutPage = () => {
         return;
       }
 
-      const now = new Date();
       const expiry = new Date(coupon.expiry_date);
-
-      if (expiry < now) {
+      if (expiry < new Date()) {
         toast.error("Coupon expired");
         return;
       }
 
       if (totalAmount < coupon.min_order_amount) {
-        toast.error(`Minimum order ₹${coupon.min_order_amount} required`);
+        toast.error(`Minimum order ₹${coupon.min_order_amount}`);
         return;
       }
 
@@ -110,24 +124,29 @@ const CheckoutPage = () => {
       setAppliedCoupon(coupon);
       setDiscountAmount(discount);
 
-      toast.success("Coupon applied successfully!");
-    } catch {
+      toast.success("Coupon applied!");
+    } catch (err) {
+      console.error(err);
       toast.error("Failed to apply coupon");
     } finally {
       setCouponLoading(false);
     }
   };
 
+  /* =========================
+     Submit Order
+  ========================= */
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!form.name || !form.phone) {
-      toast.error("Please fill in name and phone");
+      toast.error("Please enter name and phone");
       return;
     }
 
     if (state.items.length === 0) {
-      toast.error("Your cart is empty");
+      toast.error("Cart empty");
       return;
     }
 
@@ -137,26 +156,29 @@ const CheckoutPage = () => {
       let finalCustomerId = customerId;
       let addressId = selectedAddressId;
 
-      // 🔹 If guest → create new customer
+      /* ---------- Guest Customer ---------- */
+
       if (!user) {
-        const { data: newCustomer, error } = await supabase
+        const { data, error } = await supabase
           .from("customers")
           .insert([{ name: form.name, phone: form.phone }])
           .select()
           .single();
 
         if (error) throw error;
-        finalCustomerId = newCustomer.id;
+
+        finalCustomerId = data.id;
       }
 
-      // 🔹 If no saved address selected → create new one
+      /* ---------- Address ---------- */
+
       if (!selectedAddressId) {
         if (!form.address) {
-          toast.error("Please enter address");
+          toast.error("Please enter delivery address");
           return;
         }
 
-        const { data: newAddress, error } = await supabase
+        const { data, error } = await supabase
           .from("customer_addresses")
           .insert([
             {
@@ -171,14 +193,15 @@ const CheckoutPage = () => {
 
         if (error) throw error;
 
-        addressId = newAddress.id;
+        addressId = data.id;
       }
 
-      // ✅ Updated Final Amount (WITH DISCOUNT)
-      const finalAmount =
-        totalAmount + deliveryCharge - discountAmount;
+      /* ---------- Final Amount ---------- */
 
-      // 🔹 Insert Order
+      const finalAmount = totalAmount + deliveryCharge - discountAmount;
+
+      /* ---------- Create Order ---------- */
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert([
@@ -188,7 +211,7 @@ const CheckoutPage = () => {
             address_id: addressId,
             total_amount: totalAmount,
             delivery_charge: deliveryCharge,
-            discount_amount: discountAmount, // ✅ NEW
+            discount_amount: discountAmount,
             final_amount: finalAmount,
             payment_method: form.paymentMethod,
             payment_status: "pending",
@@ -200,7 +223,8 @@ const CheckoutPage = () => {
 
       if (orderError) throw orderError;
 
-      // 🔹 Insert Order Items
+      /* ---------- Insert Order Items ---------- */
+
       const orderItemsPayload = state.items.map((item) => ({
         order_id: order.id,
         product_id: item.product.id,
@@ -209,13 +233,47 @@ const CheckoutPage = () => {
         price: item.variant.price,
       }));
 
-      const { error: itemsError } = await supabase
+      const { data: insertedItems, error: itemsError } = await supabase
         .from("order_items")
-        .insert(orderItemsPayload);
+        .insert(orderItemsPayload)
+        .select();
 
       if (itemsError) throw itemsError;
 
-      // 🔹 Order History
+      /* ---------- Insert Addons ---------- */
+
+      const addonRows: any[] = [];
+
+      insertedItems.forEach((orderItem: any) => {
+        const cartItem = state.items.find(
+          (i) =>
+            i.product.id === orderItem.product_id &&
+            i.variant.id === orderItem.variant_id
+        );
+
+        if (!cartItem) return;
+
+        cartItem.addons.forEach((addon) => {
+          addonRows.push({
+            order_item_id: orderItem.id,
+            addon_id: addon.id,
+            price: addon.price,
+          });
+        });
+      });
+
+      if (addonRows.length > 0) {
+        const { error: addonError } = await supabase
+          .from("order_item_addons")
+          .insert(addonRows);
+
+        if (addonError) {
+          console.error("Addon insert error:", addonError);
+        }
+      }
+
+      /* ---------- Order History ---------- */
+
       await supabase.from("order_status_history").insert([
         {
           order_id: order.id,
@@ -223,10 +281,14 @@ const CheckoutPage = () => {
         },
       ]);
 
+      /* ---------- Clear Cart ---------- */
+
       dispatch({ type: "CLEAR_CART" });
 
       toast.success("Order placed successfully!");
+
       navigate(`/order-success?orderId=${order.id}`);
+
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong");
@@ -235,28 +297,14 @@ const CheckoutPage = () => {
     }
   };
 
-  if (state.items.length === 0) {
-    return (
-      <main>
-        <Navbar />
-        <div className="pt-24 pb-12 min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-muted-foreground mb-4">
-              Your cart is empty
-            </p>
-            <a href="/menu" className="text-primary hover:underline">
-              Browse Menu
-            </a>
-          </div>
-        </div>
-        <Footer />
-      </main>
-    );
-  }
+  /* =========================
+     UI
+  ========================= */
 
   return (
     <main>
       <Navbar />
+
       <div className="pt-20 pb-24">
         <div className="container mx-auto px-4 py-10">
           <h1 className="text-3xl font-bold text-center mb-8">
@@ -264,103 +312,25 @@ const CheckoutPage = () => {
           </h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-5xl mx-auto">
+
             <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-5">
 
-              {/* Delivery Section (UNCHANGED) */}
-              <div className="bg-card border rounded-xl p-6 space-y-4">
-                <h3 className="text-lg font-bold">
-                  Delivery Details
-                </h3>
+              <DeliveryForm
+                form={form}
+                setForm={setForm}
+                savedAddresses={savedAddresses}
+                selectedAddressId={selectedAddressId}
+                setSelectedAddressId={setSelectedAddressId}
+              />
 
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm({ ...form, name: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border rounded-lg bg-secondary"
-                />
-
-                <input
-                  type="tel"
-                  placeholder="Phone"
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm({ ...form, phone: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border rounded-lg bg-secondary"
-                />
-
-                {savedAddresses.length > 0 && (
-                  <div>
-                    <p className="font-medium mb-2">
-                      Saved Addresses
-                    </p>
-                    {savedAddresses.map((addr) => (
-                      <div
-                        key={addr.id}
-                        onClick={() =>
-                          setSelectedAddressId(addr.id)
-                        }
-                        className={`p-3 border rounded-lg mb-2 cursor-pointer ${
-                          selectedAddressId === addr.id
-                            ? "border-primary"
-                            : "border-border"
-                        }`}
-                      >
-                        {addr.address_line}, {addr.city}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {!selectedAddressId && (
-                  <textarea
-                    placeholder="Full Address"
-                    value={form.address}
-                    onChange={(e) =>
-                      setForm({ ...form, address: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border rounded-lg bg-secondary"
-                  />
-                )}
-              </div>
-
-              {/* ✅ Coupon Section */}
-              <div className="bg-card border rounded-xl p-6 space-y-4">
-                <h3 className="font-bold text-lg">
-                  Apply Coupon
-                </h3>
-
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    placeholder="Enter coupon code"
-                    value={couponCode}
-                    onChange={(e) =>
-                      setCouponCode(e.target.value)
-                    }
-                    className="flex-1 px-4 py-3 border rounded-lg"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handleApplyCoupon}
-                    disabled={couponLoading}
-                    className="bg-primary text-white px-4 py-3 rounded-lg font-bold"
-                  >
-                    {couponLoading ? "Applying..." : "Apply"}
-                  </button>
-                </div>
-
-                {appliedCoupon && (
-                  <p className="text-green-600 text-sm">
-                    Coupon "{appliedCoupon.code}" applied —
-                    Saved ₹{discountAmount}
-                  </p>
-                )}
-              </div>
+              <CouponSection
+                couponCode={couponCode}
+                setCouponCode={setCouponCode}
+                appliedCoupon={appliedCoupon}
+                discountAmount={discountAmount}
+                couponLoading={couponLoading}
+                onApply={handleApplyCoupon}
+              />
 
               <button
                 type="submit"
@@ -371,66 +341,20 @@ const CheckoutPage = () => {
                   ? "Placing Order..."
                   : `Place Order — ₹${totalAmount + deliveryCharge - discountAmount}`}
               </button>
+
             </form>
 
-            {/* Summary */}
-            <div className="lg:col-span-2">
-              <div className="bg-card border rounded-xl p-6 sticky top-24">
-                <h3 className="text-lg font-bold mb-4">
-                  Order Summary
-                </h3>
-
-                {state.items.map((item) => {
-                  const addonTotal = item.addons.reduce(
-                    (s, a) => s + a.price,
-                    0
-                  );
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex justify-between text-sm mb-2"
-                    >
-                      <span>
-                        {item.product.name} × {item.quantity}
-                      </span>
-                      <span>
-                        ₹{(item.variant.price + addonTotal) *
-                          item.quantity}
-                      </span>
-                    </div>
-                  );
-                })}
-
-                <div className="border-t pt-3 mt-3 space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>₹{totalAmount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Delivery</span>
-                    <span>₹{deliveryCharge}</span>
-                  </div>
-
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Discount</span>
-                      <span>- ₹{discountAmount}</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between font-bold border-t pt-2">
-                    <span>Total</span>
-                    <span>
-                      ₹{totalAmount + deliveryCharge - discountAmount}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <OrderSummary
+              items={state.items}
+              totalAmount={totalAmount}
+              deliveryCharge={deliveryCharge}
+              discountAmount={discountAmount}
+            />
 
           </div>
         </div>
       </div>
+
       <Footer />
     </main>
   );

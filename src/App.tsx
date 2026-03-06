@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
@@ -25,14 +25,17 @@ import TrackOrderPage from "./pages/TrackOrderPage";
 
 /* Admin Pages */
 import DashboardPage from "./admin/DashboardPage";
-import AdminOrdersPage from "./admin/AdminOrdersPage";
-import OrdersPage from "./admin/OrdersPage";
 import ProductsPage from "./admin/ProductsPage";
 import CategoriesPage from "./admin/CategoriesPage";
 import AnalyticsPage from "./admin/AnalyticsPage";
 import DeliveryPanel from "./admin/DeliveryPanel";
 import AdminCouponsPage from "./admin/AdminCouponsPage";
 import ManageAdminsPage from "./admin/ManageAdminsPage";
+
+/* Orders System */
+import PendingOrdersPage from "./admin/Orders/PendingOrdersPage";
+import AcceptedOrdersPage from "./admin/Orders/AcceptedOrdersPage";
+import RejectedOrdersPage from "./admin/Orders/RejectedOrdersPage";
 
 const queryClient = new QueryClient();
 
@@ -41,9 +44,11 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>
+
             <CartDrawer />
             <WhatsAppButton />
             <MobileCartBar />
@@ -70,22 +75,40 @@ const App = () => (
                 }
               />
 
-              {/* ADMIN ORDERS */}
+              {/* ORDERS SYSTEM */}
+
               <Route
                 path="/admin/orders"
                 element={
                   <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                    <AdminOrdersPage />
+                    <Navigate to="/admin/orders/pending" />
                   </ProtectedRoute>
                 }
               />
 
-              {/* LEGACY ORDERS PAGE (if needed) */}
               <Route
-                path="/admin/orders-list"
+                path="/admin/orders/pending"
                 element={
                   <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-                    <OrdersPage />
+                    <PendingOrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/orders/accepted"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+                    <AcceptedOrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/orders/rejected"
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
+                    <RejectedOrdersPage />
                   </ProtectedRoute>
                 }
               />

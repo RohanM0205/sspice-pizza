@@ -90,3 +90,12 @@
     box-shadow: 0 0 30px hsl(30 90% 67% / 0.2);
   }
 }
+
+@keyframes shine {
+  0% {
+    left: -75%;
+  }
+  100% {
+    left: 125%;
+  }
+}

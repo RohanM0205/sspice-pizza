@@ -132,7 +132,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
     { items: [], isOpen: false },
     (initial) => {
       const stored = localStorage.getItem("sspice-cart");
-      return stored ? JSON.parse(stored) : initial;
+  
+      if (!stored) return initial;
+  
+      try {
+        const parsed = JSON.parse(stored);
+  
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  
+        const invalidItem = parsed.items?.some(
+          (i: any) =>
+            !uuidRegex.test(i?.product?.id ?? "") ||
+            !uuidRegex.test(i?.variant?.id ?? "")
+        );
+  
+        if (invalidItem) {
+          console.warn("Invalid cart detected. Clearing old cart.");
+          localStorage.removeItem("sspice-cart");
+          return initial;
+        }
+  
+        return parsed;
+      } catch {
+        localStorage.removeItem("sspice-cart");
+        return initial;
+      }
     }
   );
 
@@ -303,8 +328,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   .from("cart_items")
   .insert({
     cart_id: cart.id,
-    product_id: item.product.id,
-    variant_id: item.variant.id,
+    product_id: String(item.product.id),
+    variant_id: String(item.variant.id),
     quantity: item.quantity,
     price: item.variant.price,
   })

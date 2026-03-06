@@ -6,6 +6,7 @@ import WhyChooseUs from "@/components/WhyChooseUs";
 import Footer from "@/components/Footer";
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import OffersBanner from "@/components/OffersBanner";
 
 const Index = () => {
   const location = useLocation();
