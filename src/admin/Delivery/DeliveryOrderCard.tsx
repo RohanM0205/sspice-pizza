@@ -187,25 +187,11 @@ const DeliveryOrderCard = ({
 
         )}
 
-        {/* MARK DELIVERED */}
+        {/* COLLECT CASH FIRST (COD ONLY) */}
 
-        {order.order_status === "out_for_delivery" && (
-
-          <button
-            onClick={() => onMarkDelivered?.(order.id)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-          >
-            <CheckCircle size={16} />
-            Mark Delivered
-          </button>
-
-        )}
-
-        {/* COD CASH COLLECTION */}
-
-        {order.payment_method === "cod" &&
-         order.payment_status === "pending" &&
-         order.order_status === "delivered" && (
+        {order.order_status === "out_for_delivery" &&
+         order.payment_method === "cod" &&
+         order.payment_status === "pending" && (
 
           <button
             onClick={() => onCollectCash?.(order.id)}
@@ -217,14 +203,31 @@ const DeliveryOrderCard = ({
 
         )}
 
+        {/* MARK DELIVERED (after cash collected OR online payment) */}
+
+        {order.order_status === "out_for_delivery" &&
+         (
+           order.payment_method !== "cod" ||
+           order.payment_status === "paid"
+         ) && (
+
+          <button
+            onClick={() => onMarkDelivered?.(order.id)}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+          >
+            <CheckCircle size={16} />
+            Mark Delivered
+          </button>
+
+        )}
+
         {/* COMPLETED */}
 
-        {order.order_status === "delivered" &&
-         order.payment_status === "paid" && (
+        {order.order_status === "delivered" && (
 
           <span className="text-green-500 flex items-center gap-2 text-sm font-medium">
             <CheckCircle size={16} />
-            Completed • Paid
+            Completed
           </span>
 
         )}

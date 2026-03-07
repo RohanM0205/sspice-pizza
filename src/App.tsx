@@ -36,6 +36,7 @@ import ManageAdminsPage from "./admin/ManageAdminsPage";
 import PendingOrdersPage from "./admin/Orders/PendingOrdersPage";
 import AcceptedOrdersPage from "./admin/Orders/AcceptedOrdersPage";
 import RejectedOrdersPage from "./admin/Orders/RejectedOrdersPage";
+import DeliveryDashboard from "./admin/Delivery/DeliveryDashboard";
 
 const queryClient = new QueryClient();
 
@@ -145,13 +146,13 @@ const App = () => (
 
               {/* DELIVERY PANEL */}
               <Route
-                path="/admin/delivery"
-                element={
-                  <ProtectedRoute allowedRoles={["delivery", "admin", "superadmin"]}>
-                    <DeliveryPanel />
-                  </ProtectedRoute>
-                }
-              />
+  path="/admin/delivery"
+  element={
+    <ProtectedRoute allowedRoles={["delivery", "admin", "superadmin"]}>
+      <DeliveryDashboard />
+    </ProtectedRoute>
+  }
+/>
 
               {/* COUPONS */}
               <Route
